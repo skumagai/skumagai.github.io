@@ -5,7 +5,7 @@ var margin = {top: 1, right: 1, bottom: 6, left: 1},
   nodePadding = 15;
 
 
-d3.json("game-moves.json", function(moves) {
+d3.json("data/game-moves.json", function(moves) {
     var nodes = moves.nodes;
     var links = moves.links;
 

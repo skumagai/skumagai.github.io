@@ -117,7 +117,9 @@ module.exports = function(grunt) {
 				livereload: true
 			},
 			js: {
-				files: [ 'Gruntfile.js', 'js/reveal.js' ],
+				files: [ 'Gruntfile.js', 'js/reveal.js',
+                                    'js/radial-tree-u.js',
+                                    'js/radial-tree-n.js'],
 				tasks: 'js'
 			},
 			theme: {
@@ -129,7 +131,8 @@ module.exports = function(grunt) {
 				tasks: 'css-core'
 			},
 			html: {
-				files: [ 'index.html', 'slides1.html', 'slides2.html', 'initial_imple.html' ]
+				files: [ 'index.html', 'slides1.html', 'slides2.html', 'initial_imple.html',
+                                    'game-tree-normalized.html', 'game-tree-unnormalized.html']
 			},
 			markdown: {
 				files: [ './*.md' ]
