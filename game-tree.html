@@ -6,7 +6,6 @@
     <title>Project</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width">
-    <link rel="stylesheet" href="styles/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js"></script>
     <style>
         .board line, .board .mark {
@@ -32,6 +31,16 @@
   <body>
       <!-- <h1>Initial Implementation</h1> -->
       <!-- <script src="load-sankey.js"></script> -->
-      <script src="js/radial-tree-n.js"></script>
+      <script src="js/radial-tree.js"></script>
+      <svg id="viz1"></svg>
+      <svg id="viz2"></svg>
+      <script>
+          var size = screen.width;
+          size = size < screen.height ? size : screen.height;
+          var graph1 = GoTree.getcontext("viz1", size);
+          var graph2 = GoTree.getcontext("viz2", size);
+          graph1.draw("data/game-tree-5.json", 0.25);
+          graph2.draw("data/game-tree-5u.json", 0.25);
+      </script>
   </body>
 </html>
