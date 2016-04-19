@@ -138,7 +138,15 @@ d3.json("data/game-tree-5.json", function(moves) {
         }
         for (var node of queue1) {
             node.children.forEach(d => d.parent = node);
-            Array.prototype.push.apply(queue2, node.children);
+            Array.prototype.push.apply(queue2, node.children.sort((a, b) => {
+                if (a.count < b.count) {
+                    return 1;
+                } else if (a.count == b.count) {
+                    return 0;
+                } else {
+                    return -1;
+                }
+            }));
             var angleinc = node.count * unitangle;
 
             node.label = "(" + node.x + "," + node.y + ")";
