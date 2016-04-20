@@ -25,7 +25,8 @@ GoTree.getcontext = function (elem, size) {
     return new GoTree.Context(adjsize, svg);
 }
 
-GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10) {
+GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel=1000) {
+    // Truncate at maxlevel-th move, even if there are more data.
     // boardfrac is a ratio of the board width/height to the width/height of SVG.
 
     var center = this.center;
@@ -145,7 +146,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10) {
 
         // first count the number of levels in the dataset and obtaind the maximum length in the tree.
         var count = function (cur, level, length) {
-            if (cur.children.length > 0) {
+            if (cur.children.length > 0 && level < maxlevel) {
                 return [].concat(...cur.children.map(c => count(c, level + 1, length + Math.abs(cur.x - c.x) + Math.abs(cur.y - c.y))));
             } else {
                 return [level, length];
