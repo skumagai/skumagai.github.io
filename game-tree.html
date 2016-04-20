@@ -33,14 +33,11 @@
       <!-- <script src="load-sankey.js"></script> -->
       <script src="js/radial-tree.js"></script>
       <svg id="viz1"></svg>
-      <svg id="viz2"></svg>
       <script>
           var size = screen.width;
           size = size < screen.height ? size : screen.height;
           var graph1 = GoTree.getcontext("viz1", size);
-          var graph2 = GoTree.getcontext("viz2", size);
-          graph1.draw("data/game-tree-5.json", 0.25);
-          graph2.draw("data/game-tree-5u.json", 0.25);
+          graph1.draw("data/game-tree-5u.json", 0.25);
       </script>
   </body>
 </html>
