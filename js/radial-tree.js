@@ -18,15 +18,40 @@ GoTree.getcontext = function (elem, size) {
             "width": size,
             "height": size,
             "preserveAspectRatio": "none"
+        });
+    svg.append("defs")
+        .append("marker")
+        .attr({
+            "id": "arrowhead",
+            "viewBox": "0 0 10 10",
+            "markerWidth": 5,
+            "markerHeight": 5,
+            "refX": 10,
+            "refY": 5,
+            "orient": "auto",
+            "markerUnits": "strokeWidth"
         })
-    .append("g")
+        .append("path")
+        .attr({
+            "d": "M0,0 L10,5 L0,10 Z"
+        });
+    svg.append("rect")
+        .attr({
+            "class": "background",
+            "x": 0,
+            "y": 0,
+            "width": size,
+            "height": size
+        });
+    svg = svg.append("g")
         .attr("transform", "translate(" + margin + "," + margin + ")");
 
     return new GoTree.Context(adjsize, svg);
 }
 
-GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel=1000) {
+GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth=10, maxlevel=15) {
     // Truncate at maxlevel-th move, even if there are more data.
+    // cutoff omit displaying moves if their % is lower than this value.
     // boardfrac is a ratio of the board width/height to the width/height of SVG.
 
     var center = this.center;
@@ -34,6 +59,8 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel
     var offset = center - boardsize / 2;
     var gridsize = 19;
     var boardmult = boardsize / gridsize;
+    var rstone = 0.4;
+    var rmark = 0.2;
 
     var svg = this.svg;
 
@@ -52,8 +79,9 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel
     });
 
 
+    d3.json(data, function(tree) {
 
-    d3.json(data, function(moves) {
+        var arcgen = d3.svg.arc();
 
         // Setting up gobard:
         var coord = d3.scale.linear().domain([1, gridsize]).range([0, boardsize]);
@@ -73,20 +101,18 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel
             // need to set the following line to properly center the board.
             .attr("transform", "translate(" + offset + "," + offset + ")");
 
-        // board.append("rect")
-        //     .attr({
-        //         "class": "background",
-        //         "x": coord(0),
-        //         "y": coord(0),
-        //         "width": coord(gridsize+1),
-        //         "height": coord(gridsize+1),
-        //     });
+        var piechart = board.append("g")
+            .attr({
+                "class": "piechart",
+                "transform": "translate(" + boardsize / 2+ "," + boardsize / 2 + ")"
+            });
 
         var hgrid = board.append("g").attr("class", "horizontal")
             .selectAll(".horizontal")
             .data(d3.range(1, gridsize+1))
             .enter().append("line")
             .attr({
+                "class": "grid",
                 "x1": coord(1),
                 "x2": coord(gridsize),
                 "y1": d => coord(d),
@@ -98,6 +124,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel
             .data(d3.range(1, gridsize+1))
             .enter().append("line")
             .attr({
+                "class": "grid",
                 "x1": d => coord(d),
                 "x2": d => coord(d),
                 "y1": coord(1),
@@ -111,7 +138,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel
             .attr({
                 "cx": d => coord(d.x),
                 "cy": d => coord(d.y),
-                "r": boardmult / 6,
+                "r": coord(1 + rmark)
             });
 
         // place the stones.
@@ -123,101 +150,118 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel
             .attr({
                 "cx": d => coord(d.x),
                 "cy": d =>  coord(d.y),
-                "r": boardmult / 2.2
+                "r": coord(1 + rstone) // radius of a stone is 0.4 times the interval of a grid.
             })
-        .classed("hidden", true);
+        .classed("hidden", true); // Stones are initially invisible.
 
         positions.forEach((v, k, m) => {
             v.elem = stones.filter((d, i) => d === v);
         });
 
-        var total = moves.count;
+        var total = tree.count;
+        cutoff *= total; // Now cutoff value is in the unit of games.
+
         var unitangle = 2 * Math.PI / total;
 
         var cangle = 0; // current angle
 
-        var queue1 = [moves];
+        var queue1 = [tree];
         var queue2 = [];
 
         var arcs = [];
         var angle = 0;
 
-        moves.parent = null;
+        tree.parent = null;
 
-        // first count the number of levels in the dataset and obtaind the maximum length in the tree.
-        var count = function (cur, level, length) {
-            if (cur.children.length > 0 && level < maxlevel) {
-                return [].concat(...cur.children.map(c => count(c, level + 1, length + Math.abs(cur.x - c.x) + Math.abs(cur.y - c.y))));
-            } else {
-                return [level, length];
-            }
-        }
-        var tmp = count(moves, 0, 0);
-        var maxlen = 0;
-        var level = 0;
-        for (var i = 0; i < tmp.length; i += 2) {
-            if (maxlen < tmp[i+1]) {
-                maxlen = tmp[i+1];
-            }
-            if (level < tmp[i]) {
-                level = tmp[i];
-            }
+        // compute Manhattan distance
+        var distance = function(node1, node2) {
+            return Math.abs(node1.x - node2.x) + Math.abs(node1.y - node2.y);
         }
 
-        var unitdist = (center - (Math.sqrt(2) * boardsize / 2) - arcwidth * level) / maxlen;
+        // depth-first (pass 1): filtering out rare moves and computing angles.
+        // also get the maximum total distance of each pass.
+        var assignangle = function(node) {
+            var maxdist = new Array(maxlevel).fill(0);
+            _assignangle(node, 0, 0, maxdist);
+            return maxdist;
+        }
+        var _assignangle = function(node, level, cumdist, maxdist) {
+            // cumdist is a cumulative distance up to the current move.
+            // maxdist is a maximum of cumulative distance up to the final displayed move.
+            level += 1;
 
-        // Going over all moves by breadth-first way.
-        while (queue1.length > 0) {
-            // This while loop represetns one level of moves (for example all 3-rd moves).
-            if (queue2.length == 0) {
-                angle = 0;
+            if (level > maxlevel) {
+                maxdist[level] = maxdist[level] > cumdist ? maxdist[level] : cumdist;
             }
-            for (var node of queue1) {
-                node.children.forEach(d => d.parent = node);
-                Array.prototype.push.apply(queue2, node.children.sort((a, b) => {
-                    if (a.count < b.count) {
-                        return 1;
-                    } else if (a.count == b.count) {
-                        return 0;
-                    } else {
-                        return -1;
-                    }
-                }));
-                var angleinc = node.count * unitangle;
 
-                node.label = "(" + node.x + "," + node.y + ")";
-                node.startAngle = angle;
-                node.endAngle = angle + angleinc;
+            node.label = "(" + node.x + "," + node.y + ")";
+            var children = node.children.filter(v => v.count >= cutoff);
 
-                if (null == node.parent) {
-                    node.innerRadius = 0;
-                    node.outerRadius = boardsize / 2 * Math.sqrt(2);
+            if (children.length == 0) {
+                maxdist[level] = maxdist[level] > cumdist ? maxdist[level] : cumdist;
+            }
+
+            children = children.sort((a, b) => {
+                if (a.count < b.count) {
+                    return 1;
+                } else if (a.count == b.count) {
+                    return 0;
                 } else {
-                    if ("root" == node.parent.player) {
-                        node.innerRadius = node.parent.outerRadius;
-                        node.outerRadius = node.innerRadius + arcwidth;
-                    } else {
-                        node.innerRadius = node.parent.outerRadius +
-                            unitdist * (Math.abs(node.x - node.parent.x) +
-                                        Math.abs(node.y - node.parent.y));
-                        node.outerRadius = node.innerRadius + arcwidth;
-                    }
-                    positions.get(node.label).nodes.push(node);
-                    arcs.push(node);
+                    return -1;
                 }
-                angle += angleinc;
+            });
+            if (node.parent == null) {
+                var lastangle = 0;
+            } else {
+                lastangle = node.startAngle;
+                cumdist += distance(node.parent, node);
             }
-            [queue1, queue2] = [queue2, queue1];
-            queue2.length = 0;
+            var newdist = cumdist;
+            children.forEach(d => {
+                d.parent = node;
+                d.startAngle = lastangle;
+                lastangle += d.count * unitangle;
+                d.endAngle = lastangle;
+                _assignangle(d, level, cumdist, maxdist);
+            });
+            return maxdist;
         }
 
-        var arcgen = d3.svg.arc();
+        // depth-first (pass 2): assign length between arcs, and register arcs to
+        // a corresponding position on the goboard.
+        var assignlength = function(node, unitdist) {
+            if (node.parent == null) {
+                node.innerRadius = 0;
+                node.outerRadius = boardsize / 2 * Math.sqrt(2);
+            } else {
+                if (node.parent == tree) {
+                    node.innerRadius = node.parent.outerRadius;
+                } else {
+                    node.innerRadius = node.parent.outerRadius +
+                        unitdist * distance(node, node.parent);
+                }
+                node.outerRadius = node.innerRadius + arcwidth;
+                positions.get(node.label).nodes.push(node);
+                arcs.push(node);
+            }
+            node.children.forEach(d => assignlength(d, unitdist));
+        }
+
+        // maxdist is updated in the following code.
+        var maxdist = assignangle(tree);
+        var lenavailable = center - Math.sqrt(2) * boardsize / 2;
+        var unitdist = Math.min(...maxdist.map((d, i) =>
+            d == 0 ? Infinity: (lenavailable - i * arcwidth) / d
+        ));
+        assignlength(tree, unitdist);
+
 
         var moves = svg.append("g")
             .attr({
                 "class": "moves",
                 "transform": "translate(" + center + "," + center + ")"
             });
+
         moves.selectAll(".move")
             .data(arcs)
             .enter()
@@ -242,9 +286,76 @@ GoTree.Context.prototype.draw = function (data, boardfrac, arcwidth=10, maxlevel
                         "W": n.player == "W"
                     })
             });
+
+            var arrows = [];
+            for (var i = 0; i < traj.length - 1; i++) {
+                var n1 = traj[i];
+                var n2 = traj[i+1];
+                var rad = Math.atan((n1.y - n2.y) / (n1.x - n2.x));
+                var xoffset = Math.cos(rad) * rstone;
+                var yoffset = Math.sin(rad) * rstone;
+                if (n1.x < n2.x) {
+                    xoffset *= -1;
+                    yoffset *= -1;
+                }
+
+                arrows.push({
+                    "x1": n1.x - xoffset,
+                    "x2": n2.x + xoffset,
+
+                    "y1": n1.y - yoffset,
+                    "y2": n2.y + yoffset
+                });
+            }
+
+            board.selectAll(".arrow")
+                .data(arrows)
+                .enter()
+                .append("line")
+                .attr({
+                    "class": "arrow",
+
+                    "x1": d => coord(d.x1),
+                    "x2": d => coord(d.x2),
+
+                    "y1": d => coord(d.y1),
+                    "y2": d => coord(d.y2),
+
+                    "marker-end": "url(#arrowhead)"
+                });
+
+            var delim = 2 * Math.PI * d.win.B / (d.win.B + d.win.W);
+            // (Invisible pie chart under the goban in the middle.
+            var bwin = {
+                "innerRadius": 0,
+                "outerRadius": boardsize / 2 * Math.sqrt(2),
+                "startAngle": 0,
+                "endAngle": delim,
+                "id": "slice-b",
+                "class": "B pie"
+            };
+            var wwin = {
+                "innerRadius": 0,
+                "outerRadius": boardsize / 2 * Math.sqrt(2),
+                "startAngle": delim,
+                "endAngle": 2 * Math.PI,
+                "id": "slice-w",
+                "class": "W pie"
+            };
+            piechart.selectAll(".pie")
+                .data([bwin, wwin])
+                .enter()
+                .append("path")
+                .attr({
+                    "d": arcgen,
+                    "class": d => d.class,
+                    "id": d => d.id
+                });
         })
         .on("mouseout", d => {
             positions.forEach((v, k, m) => v.elem.classed("hidden", true));
+            svg.selectAll(".arrow").remove();
+            svg.selectAll(".pie").remove();
         });
     });
 }
