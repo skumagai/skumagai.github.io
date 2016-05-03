@@ -287,6 +287,9 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                     })
             });
 
+            var fangle = (d.startAngle + d.endAngle - Math.PI) / 2;
+
+            var flows = [];
             var arrows = [];
             for (var i = 0; i < traj.length - 1; i++) {
                 var n1 = traj[i];
@@ -299,6 +302,20 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                     yoffset *= -1;
                 }
 
+                var or = n1.outerRadius;
+                var ir = n2.innerRadius;
+
+                var x = Math.cos(fangle);
+                var y = Math.sin(fangle);
+
+                flows.push({
+                    "x1": or * x,
+                    "x2": ir * x,
+
+                    "y1": or * y,
+                    "y2": ir * y
+                });
+
                 arrows.push({
                     "x1": n1.x - xoffset,
                     "x2": n2.x + xoffset,
@@ -307,6 +324,22 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                     "y2": n2.y + yoffset
                 });
             }
+
+            moves.selectAll(".flow")
+                .data(flows)
+                .enter()
+                .append("line")
+                .attr({
+                    "class": "flow",
+
+                    "x1": d => d.x1,
+                    "x2": d => d.x2,
+
+                    "y1": d => d.y1,
+                    "y2": d => d.y2,
+
+                    "marker-end": "url(#arrowhead)"
+                });
 
             board.selectAll(".arrow")
                 .data(arrows)
@@ -355,6 +388,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
         .on("mouseout", d => {
             positions.forEach((v, k, m) => v.elem.classed("hidden", true));
             svg.selectAll(".arrow").remove();
+            svg.selectAll(".flow").remove();
             svg.selectAll(".pie").remove();
         });
     });
