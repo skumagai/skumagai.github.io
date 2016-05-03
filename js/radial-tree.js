@@ -217,6 +217,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                     return -1;
                 }
             });
+            node.children = children;
             if (children.length == 0) {
                 return cumdist;
             }
@@ -387,18 +388,30 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                     "id": n => n.id
                 });
 
-            moves.selectAll('.move')
-                .style('fill', n => {
-                    var diff = d.winb - n.winb;
-                    var idx = Math.ceil((d.winb - n.winb) * 50 + 4.5);
-                    idx = idx < 0 ? 0 : idx;
-                    idx = idx > 10 ? 10 : idx;
-                    return colors[idx];
-                });
+            var getcolor = function(n1, n2) {
+                var idx = Math.ceil((n1.winb - n2.winb) * 50 + 4.5);
+                idx = idx < 0 ? 0 : idx;
+                idx = idx > 10 ? 10 : idx;
+                return colors[idx];
+            }
+
+            moves.selectAll('.move').style('fill', n => getcolor(d, n));
             svg.select('.colorbar').classed('hidden', false);
+
+            d.children.forEach(ch => {
+                var col = getcolor(d, ch);
+                positions.get(ch.label).elem.classed("hidden", false)
+                    .style({
+                        'fill': col,
+                        'stroke': col
+                    });
+            });
+
         })
         .on("mouseout", d => {
-            positions.forEach((v, k, m) => v.elem.classed("hidden", true));
+            positions.forEach((v, k, m) => v.elem
+                              .classed({"hidden": true, "next": false})
+                              .style({"fill": null, "stroke": null}));
             svg.selectAll(".arrow").remove();
             svg.selectAll(".pie").remove();
             moves.selectAll('.move').style('fill', null);
