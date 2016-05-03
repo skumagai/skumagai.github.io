@@ -264,38 +264,38 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
         var baryoffset = center / 20;
         colors.forEach((col, idx) => {
             colorbars.push({
-                'y': (idx + 1) * baryoffset,
-                'fill': col
+                "y": (idx + 1) * baryoffset,
+                "fill": col
             });
         });
-        var colorbar = svg.append('g').attr('class', 'colorbar hidden');
-        colorbar.selectAll('.colorblock')
+        var colorbar = svg.append("g").attr("class", "colorbar hidden");
+        colorbar.selectAll(".colorblock")
             .data(colorbars)
             .enter()
-            .append('rect')
+            .append("rect")
             .attr({
-                'x': barx,
-                'width': barwidth,
+                "x": barx,
+                "width": barwidth,
 
-                'y': n => n.y,
-                'height': n => baryoffset,
+                "y": n => n.y,
+                "height": n => baryoffset,
 
-                'class': 'colorblock'
+                "class": "colorblock"
             })
             .style("fill", n => n.fill);
-        colorbar.selectAll('.colortext')
+        colorbar.selectAll(".colortext")
             .data(d3.range(9,-10,-2))
             .enter()
-            .append('text')
+            .append("text")
             .attr({
-                'x': barx - center / 80,
-                'y': (d,i) => {
+                "x": barx - center / 80,
+                "y": (d,i) => {
                     return baryoffset * (i + 2) + baryoffset / 4;
                 },
-                'font-size': 10,
-                'text-anchor': 'end'
+                "font-size": 10,
+                "text-anchor": "end"
             })
-            .text(n => n + '%');
+            .text(n => n + "%");
 
         moves.selectAll(".move")
             .data(arcs)
@@ -395,15 +395,15 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 return colors[idx];
             }
 
-            moves.selectAll('.move').style('fill', n => getcolor(d, n));
-            svg.select('.colorbar').classed('hidden', false);
+            moves.selectAll(".move").style("fill", n => getcolor(d, n));
+            svg.select(".colorbar").classed("hidden", false);
 
             d.children.forEach(ch => {
                 var col = getcolor(d, ch);
                 positions.get(ch.label).elem.classed("hidden", false)
                     .style({
-                        'fill': col,
-                        'stroke': col
+                        "fill": col,
+                        "stroke": col
                     });
             });
 
@@ -414,8 +414,8 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                               .style({"fill": null, "stroke": null}));
             svg.selectAll(".arrow").remove();
             svg.selectAll(".pie").remove();
-            moves.selectAll('.move').style('fill', null);
-            svg.select('.colorbar').classed('hidden', true);
+            moves.selectAll(".move").style("fill", null);
+            svg.select(".colorbar").classed("hidden", true);
         });
     });
 }
