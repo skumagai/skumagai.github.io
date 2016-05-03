@@ -62,6 +62,11 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
     var rstone = 0.4;
     var rmark = 0.2;
 
+    var colors = [
+        "#000000", "#1a1a1a", "#333333", "#4d4d4d",
+        "#666666", "#808080", "#9a9a9a", "#b3b3b3",
+        "#cdcdcd", "#e6e6e6", "#ffffff"];
+
     var svg = this.svg;
 
     var Position = function (x, y) {
@@ -252,6 +257,45 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 "transform": "translate(" + center + "," + center + ")"
             });
 
+        var colorbars = [];
+        var barx = center / 10;
+        var barwidth = center / 20;
+        var baryoffset = center / 20;
+        colors.forEach((col, idx) => {
+            colorbars.push({
+                'y': (idx + 1) * baryoffset,
+                'fill': col
+            });
+        });
+        var colorbar = svg.append('g').attr('class', 'colorbar hidden');
+        colorbar.selectAll('.colorblock')
+            .data(colorbars)
+            .enter()
+            .append('rect')
+            .attr({
+                'x': barx,
+                'width': barwidth,
+
+                'y': n => n.y,
+                'height': n => baryoffset,
+
+                'class': 'colorblock'
+            })
+            .style("fill", n => n.fill);
+        colorbar.selectAll('.colortext')
+            .data(d3.range(9,-10,-2))
+            .enter()
+            .append('text')
+            .attr({
+                'x': barx - center / 80,
+                'y': (d,i) => {
+                    return baryoffset * (i + 2) + baryoffset / 4;
+                },
+                'font-size': 10,
+                'text-anchor': 'end'
+            })
+            .text(n => n);
+
         moves.selectAll(".move")
             .data(arcs)
             .enter()
@@ -261,10 +305,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 "class": d => "move " + d.player
             })
         .on("mouseover", d => {
-            var colors = [
-                "#000000", "#1a1a1a", "#333333", "#4d4d4d",
-                "#666666", "#808080", "#9a9a9a", "#b3b3b3",
-                "#cdcdcd", "#e6e6e6", "#ffffff"];
 
             var traj = [d];
             var cur = d;
@@ -355,12 +395,14 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                     idx = idx > 10 ? 10 : idx;
                     return colors[idx];
                 });
+            svg.select('.colorbar').classed('hidden', false);
         })
         .on("mouseout", d => {
             positions.forEach((v, k, m) => v.elem.classed("hidden", true));
             svg.selectAll(".arrow").remove();
             svg.selectAll(".pie").remove();
             moves.selectAll('.move').style('fill', null);
+            svg.select('.colorbar').classed('hidden', true);
         });
     });
 }
