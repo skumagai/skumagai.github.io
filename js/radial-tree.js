@@ -294,7 +294,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 'font-size': 10,
                 'text-anchor': 'end'
             })
-            .text(n => n);
+            .text(n => n + '%');
 
         moves.selectAll(".move")
             .data(arcs)
