@@ -49,7 +49,7 @@ GoTree.getcontext = function (elem, size) {
     return new GoTree.Context(adjsize, svg);
 }
 
-GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth=10, maxlevel=15) {
+GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel=15) {
     // Truncate at maxlevel-th move, even if there are more data.
     // cutoff omit displaying moves if their % is lower than this value.
     // boardfrac is a ratio of the board width/height to the width/height of SVG.
@@ -181,25 +181,25 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
         // depth-first (pass 1): filtering out rare moves and computing angles.
         // also get the maximum total distance of each pass.
         var assignangle = function(node) {
-            var maxdist = new Array(maxlevel).fill(0);
-            _assignangle(node, 0, 0, maxdist);
-            return maxdist;
+            return _assignangle(node, 0, 0);
         }
-        var _assignangle = function(node, level, cumdist, maxdist) {
+        var _assignangle = function(node, level, cumdist) {
             // cumdist is a cumulative distance up to the current move.
             // maxdist is a maximum of cumulative distance up to the final displayed move.
             level += 1;
-
             if (level > maxlevel) {
-                maxdist[level] = maxdist[level] > cumdist ? maxdist[level] : cumdist;
+                return cumdist;
+            }
+
+            if (node.parent == null) {
+                var lastangle = 0;
+            } else {
+                lastangle = node.startAngle;
+                cumdist += distance(node.parent, node);
             }
 
             node.label = "(" + node.x + "," + node.y + ")";
             var children = node.children.filter(v => v.count >= cutoff);
-
-            if (children.length == 0) {
-                maxdist[level] = maxdist[level] > cumdist ? maxdist[level] : cumdist;
-            }
 
             children = children.sort((a, b) => {
                 if (a.count < b.count) {
@@ -210,19 +210,17 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                     return -1;
                 }
             });
-            if (node.parent == null) {
-                var lastangle = 0;
-            } else {
-                lastangle = node.startAngle;
-                cumdist += distance(node.parent, node);
+            if (children.length == 0) {
+                return cumdist;
             }
-            var newdist = cumdist;
+            var maxdist = 0;
             children.forEach(d => {
                 d.parent = node;
                 d.startAngle = lastangle;
                 lastangle += d.count * unitangle;
                 d.endAngle = lastangle;
-                _assignangle(d, level, cumdist, maxdist);
+                var d = _assignangle(d, level, cumdist);
+                maxdist = maxdist < d ? d : maxdist;
             });
             return maxdist;
         }
@@ -234,13 +232,8 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                 node.innerRadius = 0;
                 node.outerRadius = boardsize / 2 * Math.sqrt(2);
             } else {
-                if (node.parent == tree) {
-                    node.innerRadius = node.parent.outerRadius;
-                } else {
-                    node.innerRadius = node.parent.outerRadius +
-                        unitdist * distance(node, node.parent);
-                }
-                node.outerRadius = node.innerRadius + arcwidth;
+                node.innerRadius = node.parent.outerRadius;
+                node.outerRadius = node.innerRadius + unitdist * distance(node, node.parent);
                 positions.get(node.label).nodes.push(node);
                 arcs.push(node);
             }
@@ -249,12 +242,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
 
         // maxdist is updated in the following code.
         var maxdist = assignangle(tree);
-        var lenavailable = center - Math.sqrt(2) * boardsize / 2;
-        var unitdist = Math.min(...maxdist.map((d, i) =>
-            d == 0 ? Infinity: (lenavailable - i * arcwidth) / d
-        ));
-        assignlength(tree, unitdist);
-
+        assignlength(tree, (center - Math.sqrt(2) * boardsize / 2 -5) / maxdist);
 
         var moves = svg.append("g")
             .attr({
@@ -287,9 +275,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                     })
             });
 
-            var fangle = (d.startAngle + d.endAngle - Math.PI) / 2;
-
-            var flows = [];
             var arrows = [];
             for (var i = 0; i < traj.length - 1; i++) {
                 var n1 = traj[i];
@@ -302,20 +287,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                     yoffset *= -1;
                 }
 
-                var or = n1.outerRadius;
-                var ir = n2.innerRadius;
-
-                var x = Math.cos(fangle);
-                var y = Math.sin(fangle);
-
-                flows.push({
-                    "x1": or * x,
-                    "x2": ir * x,
-
-                    "y1": or * y,
-                    "y2": ir * y
-                });
-
                 arrows.push({
                     "x1": n1.x - xoffset,
                     "x2": n2.x + xoffset,
@@ -324,22 +295,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
                     "y2": n2.y + yoffset
                 });
             }
-
-            moves.selectAll(".flow")
-                .data(flows)
-                .enter()
-                .append("line")
-                .attr({
-                    "class": "flow",
-
-                    "x1": d => d.x1,
-                    "x2": d => d.x2,
-
-                    "y1": d => d.y1,
-                    "y2": d => d.y2,
-
-                    "marker-end": "url(#arrowhead)"
-                });
 
             board.selectAll(".arrow")
                 .data(arrows)
@@ -388,7 +343,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, arcwidth
         .on("mouseout", d => {
             positions.forEach((v, k, m) => v.elem.classed("hidden", true));
             svg.selectAll(".arrow").remove();
-            svg.selectAll(".flow").remove();
             svg.selectAll(".pie").remove();
         });
     });
