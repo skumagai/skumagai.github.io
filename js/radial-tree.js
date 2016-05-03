@@ -191,6 +191,8 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 return cumdist;
             }
 
+            node.winb = node.win.B / (node.win.B + node.win.W);
+
             if (node.parent == null) {
                 var lastangle = 0;
             } else {
@@ -256,9 +258,14 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             .append("path")
             .attr({
                 "d": arcgen,
-                "class": d => d.player
+                "class": d => "move " + d.player
             })
         .on("mouseover", d => {
+            var colors = [
+                "#000000", "#1a1a1a", "#333333", "#4d4d4d",
+                "#666666", "#808080", "#9a9a9a", "#b3b3b3",
+                "#cdcdcd", "#e6e6e6", "#ffffff"];
+
             var traj = [d];
             var cur = d;
             while (cur.parent.player != "root") {
@@ -303,16 +310,16 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 .attr({
                     "class": "arrow",
 
-                    "x1": d => coord(d.x1),
-                    "x2": d => coord(d.x2),
+                    "x1": n => coord(n.x1),
+                    "x2": n => coord(n.x2),
 
-                    "y1": d => coord(d.y1),
-                    "y2": d => coord(d.y2),
+                    "y1": n => coord(n.y1),
+                    "y2": n => coord(n.y2),
 
                     "marker-end": "url(#arrowhead)"
                 });
 
-            var delim = 2 * Math.PI * d.win.B / (d.win.B + d.win.W);
+            var delim = 2 * Math.PI * d.winb;
             // (Invisible pie chart under the goban in the middle.
             var bwin = {
                 "innerRadius": 0,
@@ -336,14 +343,24 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 .append("path")
                 .attr({
                     "d": arcgen,
-                    "class": d => d.class,
-                    "id": d => d.id
+                    "class": n => n.class,
+                    "id": n => n.id
+                });
+
+            moves.selectAll('.move')
+                .style('fill', n => {
+                    var diff = d.winb - n.winb;
+                    var idx = Math.ceil((d.winb - n.winb) * 50 + 4.5);
+                    idx = idx < 0 ? 0 : idx;
+                    idx = idx > 10 ? 10 : idx;
+                    return colors[idx];
                 });
         })
         .on("mouseout", d => {
             positions.forEach((v, k, m) => v.elem.classed("hidden", true));
             svg.selectAll(".arrow").remove();
             svg.selectAll(".pie").remove();
+            moves.selectAll('.move').style('fill', null);
         });
     });
 }
