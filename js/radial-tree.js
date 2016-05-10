@@ -193,9 +193,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             // cumdist is a cumulative distance up to the current move.
             // maxdist is a maximum of cumulative distance up to the final displayed move.
             level += 1;
-            if (level > maxlevel) {
-                return cumdist;
-            }
 
             node.winb = node.win.B / (node.win.B + node.win.W);
 
@@ -220,6 +217,13 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             });
             node.children = children;
             if (children.length == 0) {
+                return cumdist;
+            }
+            if (level > maxlevel) {
+                children.forEach(d => {
+                    d.label = "(" + d.x + "," + d.y + ")";
+                    d.winb = d.win.B / (d.win.B + d.win.W);
+                });
                 return cumdist;
             }
             var maxdist = 0;
