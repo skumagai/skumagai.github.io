@@ -63,9 +63,10 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
     var rmark = 0.2;
 
     var colors = [
-        "#000000", "#1a1a1a", "#333333", "#4d4d4d",
-        "#666666", "#808080", "#9a9a9a", "#b3b3b3",
-        "#cdcdcd", "#e6e6e6", "#ffffff"];
+        "#00ff00", "#33ff33", "#66ff66", "#99ff99", "#ccffcc",
+        "#ffeeee",
+        "#ffccff", "#ff99ff", "#ff66ff", "#ff33ff", "#ff00ff"
+    ];
 
     var svg = this.svg;
 
@@ -268,7 +269,8 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 "fill": col
             });
         });
-        var colorbar = svg.append("g").attr("class", "colorbar hidden");
+        var colorbar = svg.append("g").attr("class", "colorbar")
+            .style("opacity", 0);
         colorbar.selectAll(".colorblock")
             .data(colorbars)
             .enter()
@@ -395,8 +397,15 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 return colors[idx];
             }
 
-            moves.selectAll(".move").style("fill", n => getcolor(d, n));
-            svg.select(".colorbar").classed("hidden", false);
+            moves.selectAll(".move").style("fill", n => {
+                if (n == d) { return null; }
+                return getcolor(d, n);
+            });
+            svg.select(".colorbar")
+                .transition()
+                .delay(100)
+                .duration(200)
+                .style("opacity", 1);
 
             d.children.forEach(ch => {
                 var col = getcolor(d, ch);
@@ -415,7 +424,11 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             svg.selectAll(".arrow").remove();
             svg.selectAll(".pie").remove();
             moves.selectAll(".move").style("fill", null);
-            svg.select(".colorbar").classed("hidden", true);
+            svg.select(".colorbar")
+                .transition()
+                .delay(100)
+                .duration(200)
+                .style("opacity", 0);
         });
     });
 }
