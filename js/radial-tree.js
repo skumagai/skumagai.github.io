@@ -333,6 +333,26 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             })
             .text("W");
 
+        colorbar.append("circle")
+            .attr({
+                "cx": barx - center / 15,
+                "cy": baryoffset + baryoffset / 30,
+                "r": center / 100,
+            })
+            .style({
+                "fill": "#000000",
+                "stroke": "#888888"});
+
+        colorbar.append("circle")
+            .attr({
+                "cx": barx + barwidth * 3 - center / 19,
+                "cy": baryoffset + baryoffset / 30,
+                "r": center / 100,
+            })
+            .style({
+                "fill": "#ffffff",
+                "stroke": "#888888"});
+
         moves.selectAll(".move")
             .data(arcs)
             .enter()
