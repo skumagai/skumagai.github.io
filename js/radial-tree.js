@@ -466,7 +466,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 positions.get(ch.label).elem.classed("hidden", false)
                     .style({
                         "fill": col,
-                        "stroke": col
+                        "stroke": "#a0a0a0"
                     });
             });
 
