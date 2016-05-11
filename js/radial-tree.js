@@ -459,8 +459,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             });
             svg.select(".colorbar")
                 .transition()
-                .delay(100)
-                .duration(200)
                 .style("opacity", 1);
 
             d.children.forEach(ch => {
@@ -482,8 +480,6 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             moves.selectAll(".move").style("fill", null);
             svg.select(".colorbar")
                 .transition()
-                .delay(100)
-                .duration(200)
                 .style("opacity", 0);
         });
     });
