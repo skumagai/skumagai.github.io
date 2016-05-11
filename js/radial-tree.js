@@ -63,9 +63,8 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
     var rmark = 0.2;
 
     var colors = [
-        "#00ff00", "#33ff33", "#66ff66", "#99ff99", "#ccffcc",
-        "#ffeeee",
-        "#ffccff", "#ff99ff", "#ff66ff", "#ff33ff", "#ff00ff"
+        "#00d200", "#00e400", "#00f000", "#40ff40", "#90ff90", "#e0ffe0",
+        "#ffefff", "#ffd8ff", "#ffbfff", "#ff9fff", "#ff5fff", "#ff00ff"
     ];
 
     var svg = this.svg;
@@ -290,7 +289,7 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
             })
             .style("fill", n => n.fill);
         colorbar.selectAll(".colortext")
-            .data(d3.range(9,-10,-2))
+            .data(d3.range(10,-11,-2))
             .enter()
             .append("text")
             .attr({
@@ -301,7 +300,38 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 "font-size": 10,
                 "text-anchor": "end"
             })
-            .text(n => n + "%");
+            .text(n => n > 0 ? "+" + n + "%" : n + "%");
+
+        colorbar.selectAll(".colortext")
+            .data(d3.range(-10,11,2))
+            .enter()
+            .append("text")
+            .attr({
+                "x": barx + barwidth * 3,
+                "y": (d,i) => {
+                    return baryoffset * (i + 2) + baryoffset / 4;
+                },
+                "font-size": 10,
+                "text-anchor": "end"
+            })
+            .text(n => n > 0 ? "+" + n + "%" : n + "%");
+
+        colorbar.append("text")
+            .attr({
+                "x": barx - center / 80,
+                "y": baryoffset + baryoffset / 4,
+                "font-size": 10,
+                "text-anchor": "end",
+            })
+            .text("B");
+        colorbar.append("text")
+            .attr({
+                "x": barx + barwidth * 3,
+                "y": baryoffset + baryoffset / 4,
+                "font-size": 10,
+                "text-anchor": "end",
+            })
+            .text("W");
 
         moves.selectAll(".move")
             .data(arcs)
@@ -395,9 +425,11 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                 });
 
             var getcolor = function(n1, n2) {
-                var idx = Math.ceil((n1.winb - n2.winb) * 50 + 4.5);
+                var idx = (n1.winb - n2.winb) / 0.02;
+                idx = idx < 0 ? Math.ceil(idx) : Math.floor(idx);
+                idx += 5;
                 idx = idx < 0 ? 0 : idx;
-                idx = idx > 10 ? 10 : idx;
+                idx = idx > 11 ? 11 : idx;
                 return colors[idx];
             }
 
