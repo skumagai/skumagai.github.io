@@ -49,7 +49,11 @@ GoTree.getcontext = function (elem, size) {
     return new GoTree.Context(adjsize, svg);
 }
 
-GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel=15) {
+GoTree.Context.prototype.draw = function (data,
+                                          boardfrac,
+                                          cutoff=0.01,
+                                          maxlevel=15,
+                                          colorscheme=0) {
     // Truncate at maxlevel-th move, even if there are more data.
     // cutoff omit displaying moves if their % is lower than this value.
     // boardfrac is a ratio of the board width/height to the width/height of SVG.
@@ -62,10 +66,26 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
     var rstone = 0.4;
     var rmark = 0.2;
 
-    var colors = [
-        "#00d200", "#00e400", "#00f000", "#40ff40", "#90ff90", "#e0ffe0",
-        "#ffefff", "#ffd8ff", "#ffbfff", "#ff9fff", "#ff5fff", "#ff00ff"
+    var colorschemes = [
+        [
+            "#2A428B","#475693","#606B9D","#7B83AB","#9A9FBB","#C0C2D0",
+            "#D2BEC2","#BE969D","#AD7681","#9D5A68","#8F3F52","#81233E"
+        ],
+        [
+            "#534A00", "#675D00", "#7C7300", "#948C44", "#AFA97D", "#D2CFBC",
+            "#CECCE0", "#A7A4CD", "#8984BE", "#7068B2", "#594EA9", "#4431A8"
+        ],
+        [
+            "#023FA5","#5868AC", "#848DBC", "#A9AECB", "#C8CAD8", "#DDDEE0",
+            "#E1DDDD", "#D9C6C9", "#CEA5AC", "#BE7E8A", "#A94F64", "#8E063B"
+        ],
+        [
+            "#00d200", "#00e400", "#00f000", "#40ff40", "#90ff90", "#e0ffe0",
+            "#ffefff", "#ffd8ff", "#ffbfff", "#ff9fff", "#ff5fff", "#ff00ff"
+        ]
     ];
+
+    var colors = colorschemes[colorscheme];
 
     var svg = this.svg;
 
@@ -444,10 +464,9 @@ GoTree.Context.prototype.draw = function (data, boardfrac, cutoff=0.01, maxlevel
                     "id": n => n.id
                 });
 
+            console.log(d.winb);
             var getcolor = function(n1, n2) {
-                var idx = (n1.winb - n2.winb) / 0.02;
-                idx = idx < 0 ? Math.ceil(idx) : Math.floor(idx);
-                idx += 5;
+                var idx = Math.ceil((n1.winb - n2.winb) / 0.02) + 5;
                 idx = idx < 0 ? 0 : idx;
                 idx = idx > 11 ? 11 : idx;
                 return colors[idx];
