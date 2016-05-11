@@ -464,7 +464,6 @@ GoTree.Context.prototype.draw = function (data,
                     "id": n => n.id
                 });
 
-            console.log(d.winb);
             var getcolor = function(n1, n2) {
                 var idx = Math.ceil((n1.winb - n2.winb) / 0.02) + 5;
                 idx = idx < 0 ? 0 : idx;
